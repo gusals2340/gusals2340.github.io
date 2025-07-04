@@ -1,0 +1,20 @@
+﻿ID,NAME,SOURCE,STYLE,TYPE,LVL,MVL,FILTER,OPERATION,REPLACE,SKIP_GRID_FILTER
+1,바다,WD1_SEA,2,polygon,9,12,,,,
+2,해심100,WD1_WATER_POLY_302,92,polygon,9,12,,,,
+3,해심200,WD1_WATER_POLY_303,93,polygon,9,12,,,,
+4,해심500,WD1_WATER_POLY_304,94,polygon,9,12,,,,
+5,해심1000,WD1_WATER_POLY_305,95,polygon,9,12,,,,
+6,해심2000,WD1_WATER_POLY_306,96,polygon,9,12,,,,
+7,해심3000,WD1_WATER_POLY_307,97,polygon,9,12,,,,
+8,등고레벨1,WD1_TERRAIN_POLY_401,71,polygon,9,12,,,,
+9,등고레벨3,WD1_TERRAIN_POLY_403,73,polygon,9,12,,,,
+10,등고레벨5,WD1_TERRAIN_POLY_405,75,polygon,9,12,,,,
+11,국경,WD1_BOUND_LINE_1002,124,line,9,12,,"[[""merge"", 1, 90]]",,
+12,도경계,WD1_BOUND_LINE_1003,120,line,9,12,,"[[""merge"", 1, 90]]",,
+13,고속도로,WD1_ROAD_LINE_101,101,line,9,12,,"[[""merge"", 1, 90]]",,
+1001,도명,T_NAME_4,1004,poi,9,10,cat_id = '110129',,,1.0
+1005,고속도로번호,T_NAME_4,1001,poi,9,9,cat_id = '140202',,,1.0
+1002,특별시/광역시명,T_NAME_4,1002,poi,9,12,cat_id = '110105' order by SEQ_ID,,,1.0
+1006,주요섬명,T_NAME_4,1014,poi,9,9,cat_id = '110211',,,1.0
+1003,일반시명,T_NAME_4,1000,poi,9,10,cat_id = '110106',,,1.0
+1004,국내주요해양/도서명,T_NAME_4,1008,poi,9,12,cat_id = '110104',,,1.0

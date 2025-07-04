@@ -1,0 +1,42 @@
+﻿ID,NAME,SOURCE,STYLE,TYPE,LVL,MVL,FILTER,OPERATION,REPLACE,SKIP_GRID_FILTER
+1,바다,WD2_SEA,2,polygon,7,8,,,,
+2,시가지구역,WD2_AREA_POLY_501,70,polygon,7,8,,,,
+3,등고레벨1,WD2_TERRAIN_POLY_401,71,polygon,7,8,,,,
+4,등고레벨3,WD2_TERRAIN_POLY_403,73,polygon,7,8,,,,
+5,등고레벨5,WD2_TERRAIN_POLY_405,75,polygon,7,8,,,,
+6,등고레벨7,WD2_TERRAIN_POLY_407,77,polygon,7,8,,,,
+7,실폭하천,WD2_WATER_POLY_311,33,polygon,7,8,,,,
+0,군립공원경계,WD2_BOUND_POLY_1009,83,polygon,7,8,,,,
+0,도립공원경계,WD2_BOUND_POLY_1008,82,polygon,7,8,,,,
+0,국립공원경계,WD2_BOUND_POLY_1007,81,polygon,7,8,,,,
+11,국경,WD2_BOUND_LINE_1002,124,line,7,8,,"[[""merge"", 1, 90]]",,
+13,시경계,WD2_BOUND_LINE_1004,121,line,8,8,,"[[""merge"", 1, 90]]",,
+14,주요간선도로,WD2_ROAD_LINE_105,105,line,7,7,,"[[""merge"", 1, 90]]",,
+15,지방도,WD2_ROAD_LINE_104,104,line,7,7,,"[[""merge"", 1, 90]]",,
+16,국도,WD2_ROAD_LINE_103,103,line,7,8,,"[[""merge"", 1, 90]]",,
+17,도시고속화도로,WD2_ROAD_LINE_102,102,line,7,8,,"[[""merge"", 1, 90]]",,
+18,고속도로,WD2_ROAD_LINE_101,101,line,7,8,,"[[""merge"", 1, 90]]",,
+0,도경계,WD2_BOUND_LINE_1003,120,line,8,8,,"[[""merge"", 1, 90]]",,
+201,tpeg 7,TPEG,5000,tpeg,7,7,ROAD_CATE = 0 and OFFSET = 1,"[[""offset"", 576], [""buffer"", 64]]",,
+1001,특별시/광역시명,T_NAME_3,1002,poi,7,8,cat_id = '110105',,,1.0
+1002,일반시명,T_NAME_3,1007,poi,7,8,cat_id = '110106',,,1.0
+1003,국내주요해양/도서명,T_NAME_3,1008,poi,7,8,cat_id = '110104',,,1.0
+1004,고속도로번호,T_NAME_3,1001,poi,7,8,cat_id = '140202',,,1.0
+1006,국도번호,T_NAME_3,1011,poi,7,8,cat_id = '140203',,,1.0
+1009,주요섬명,T_NAME_3,1167,poi,7,8,cat_id = '110211',,,1.0
+1005,도명,T_NAME_3,1010,poi,7,8,cat_id = '110129',,,1.0
+1007,국립공원,T_NAME_3,1012,poi,7,8,cat_id = '50701',,,1.0
+1008,주요산명,T_NAME_3,1013,poi,7,8,cat_id = '110202',,,1.0
+1010,군명,T_NAME_3,1015,poi,7,8,cat_id = '110107',,,1.0
+1011,JC명,T_NAME_3,1016,poi,7,7,cat_id = '140301',,,1.0
+1012,국제공항,T_NAME_3,1017,poi,7,7,cat_id = '150101',,,1.0
+1013,일반공항,T_NAME_3,1018,poi,7,7,cat_id = '150102',,,1.0
+1014,도립공원,T_NAME_3,1019,poi,7,8,cat_id = '50702',,,1.0
+1015,주요항구,T_NAME_3,1020,poi,7,7,cat_id = '150201',,,1.0
+1016,유명관광지,T_NAME_3,1021,poi,7,7,cat_id = '60514',,,1.0
+1017,일반섬명,T_NAME_3,1022,poi,7,7,cat_id = '110212',,,1.0
+1018,기타산명,T_NAME_3,1023,poi,7,8,cat_id = '110203',,,1.0
+1019,해수욕장,T_NAME_3,1024,poi,7,7,cat_id = '60501',,,1.0
+1020,일반어항명,T_NAME_3,1025,poi,7,7,cat_id = '150205',,,1.0
+1021,지방마을명,T_NAME_3,1026,poi,7,7,cat_id = '110115',,,1.0
+1022,제방/방조제/방파제,T_NAME_3,1027,poi,7,8,cat_id = '190206',,,1.0

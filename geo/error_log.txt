@@ -1,0 +1,61 @@
+Live reload enabled.
+ Loading simplify.js from: ./simplify.min.js
+shape.html:249 Web Worker error: 
+ErrorEvent
+isTrusted
+: 
+true
+bubbles
+: 
+false
+cancelBubble
+: 
+false
+cancelable
+: 
+true
+colno
+: 
+1
+composed
+: 
+false
+currentTarget
+: 
+Window {window: Window, self: Window, document: document, name: '', location: Location, …}
+defaultPrevented
+: 
+false
+error
+: 
+null
+eventPhase
+: 
+0
+filename
+: 
+"http://127.0.0.1:5501/shp_worker.js"
+lineno
+: 
+8
+message
+: 
+"Uncaught NetworkError: Failed to execute 'importScripts' on 'WorkerGlobalScope': The script at 'http://127.0.0.1:5501/simplify.min.js' failed to load."
+returnValue
+: 
+true
+srcElement
+: 
+Window {window: Window, self: Window, document: document, name: '', location: Location, …}
+target
+: 
+Window {window: Window, self: Window, document: document, name: '', location: Location, …}
+timeStamp
+: 
+6297.699999809265
+type
+: 
+"error"
+[[Prototype]]
+: 
+ErrorEvent
