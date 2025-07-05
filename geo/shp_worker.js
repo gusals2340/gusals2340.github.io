@@ -72,6 +72,17 @@ self.onmessage = async function(e) {
                     shp.parseDbf(task.dbfBuffer)
                 ]);
 
+                // SHP 파일 이름을 GeoJSON 피처의 속성에 추가
+                const shpFileName = task.name; // task.name은 확장자 없는 파일 이름
+                if (geojson && geojson.features) {
+                    geojson.features.forEach(feature => {
+                        if (!feature.properties) {
+                            feature.properties = {};
+                        }
+                        feature.properties._shpFileName = shpFileName;
+                    });
+                }
+
                 // 도형 단순화 적용
                 if (simplificationTolerance > 0) { // tolerance 변수명 수정
                     geojson = simplifyGeoJSON(geojson, simplificationTolerance);

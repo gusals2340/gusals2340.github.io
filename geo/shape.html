@@ -17,12 +17,25 @@
         body { font-family: 'Noto Sans KR', sans-serif; background-color: #f0f2f5; }
         .card-custom { box-shadow: 0 4px 8px rgba(0,0,0,0.05); border: none; }
         #map { height: 80vh; border-radius: .375rem; }
+        .card-body.tab-content { display: flex; flex-direction: column; flex-grow: 1; }
+        .tab-pane.fade { display: flex; flex-direction: column; flex-grow: 1; }
         #main-sidebar-card { height: 80vh; display: flex; flex-direction: column; }
-        #layer-list-content, #csv-list-content { overflow-y: auto; flex-grow: 1; }
-        .layer-item { display: flex; align-items: center; padding: 0.75rem;
-            border-bottom: 1px solid #eee; }
+        #layer-list-content, #csv-list-content, #json-list-content { overflow-y: auto; flex-grow: 1; }
+        .layer-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            border-bottom: 1px solid #eee;
+            min-height: 50px; /* 일관된 높이를 위해 최소 높이 추가 */
+        }
         .layer-item:last-child { border-bottom: none; }
-        .layer-name { flex-grow: 1; margin-left: 0.75rem; font-size: 0.95rem; }
+        .layer-item .layer-name {
+            flex-grow: 1;
+            margin-left: 0.75rem;
+            font-size: 0.95rem;
+            display: flex; /* 텍스트 수직 중앙 정렬을 위해 flex 사용 */
+            align-items: center;
+        }
         .btn-icon-text .fa-fw { margin-right: 0.5rem; }
         .drag-over { border: 2px dashed #007bff; background-color: #e9f5ff; }
     </style>
@@ -33,6 +46,10 @@
             <div class="d-flex flex-wrap align-items-center justify-content-between">
                 <h1 class="h4 mb-0 me-3"><i class="fas fa-map-location-dot text-primary"></i> Advanced SHP Viewer</h1>
                 <div class="btn-toolbar">
+                    <div class="input-group me-2">
+                        <span class="input-group-text">단순화 허용 오차</span>
+                        <input type="number" id="simplification-tolerance" class="form-control" value="0.0001" step="0.0001" min="0">
+                    </div>
                     <div class="btn-group me-2" role="group">
                         <label for="folder-input" class="btn btn-primary btn-icon-text">
                             <i class="fa-solid fa-folder-open fa-fw"></i> 폴더 열기
@@ -46,8 +63,15 @@
                             <i class="fa-solid fa-file-csv fa-fw"></i> CSV 추가
                             <input type="file" id="csv-file-input" accept=".csv" multiple style="display: none;" data-last-path-key="lastCsvOpenPath">
                         </label>
+                        <label for="json-file-input" class="btn btn-warning btn-icon-text">
+                            <i class="fa-solid fa-file-code fa-fw"></i> JSON 추가
+                            <input type="file" id="json-file-input" accept=".json" multiple style="display: none;" data-last-path-key="lastJsonOpenPath">
+                        </label>
                     </div>
                     <div class="btn-group" role="group">
+                         <button id="toggle-base-map-btn" class="btn btn-secondary btn-icon-text">
+                            <i class="fa-solid fa-map"></i> 배경 지도 On/Off
+                        </button>
                          <button id="delete-selected-btn" class="btn btn-danger btn-icon-text">
                             <i class="fa-solid fa-check-square fa-fw"></i> 선택 삭제
                         </button>
@@ -75,6 +99,9 @@
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link" id="csv-tab" data-bs-toggle="tab" data-bs-target="#csv" type="button" role="tab" aria-controls="csv" aria-selected="false"><i class="fa-solid fa-file-csv"></i> CSV</button>
                             </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="json-tab" data-bs-toggle="tab" data-bs-target="#json" type="button" role="tab" aria-controls="json" aria-selected="false"><i class="fa-solid fa-file-code"></i> JSON</button>
+                            </li>
                         </ul>
                     </div>
                     <div class="card-body p-0 tab-content" id="myTabContent">
@@ -91,6 +118,14 @@
                                 <div class="text-center text-muted p-5">
                                     <i class="fa-solid fa-file-csv fa-2x mb-3"></i>
                                     <p>CSV 파일을 추가하세요.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="json" role="tabpanel" aria-labelledby="json-tab">
+                            <div id="json-list-content" class="p-0">
+                                <div class="text-center text-muted p-5">
+                                    <i class="fa-solid fa-file-code fa-2x mb-3"></i>
+                                    <p>JSON 파일을 추가하세요.</p>
                                 </div>
                             </div>
                         </div>
@@ -128,6 +163,7 @@
         const map = L.map('map').setView([37.5665, 126.9780], 10);
         let loadedLayers = {};
         let loadedCsvs = {}; // 로드된 CSV 파일 정보를 저장할 객체
+        let loadedJsons = {}; // 로드된 JSON 파일 정보를 저장할 객체
         let shpWorker = null; // 웹 워커 인스턴스
         let processingTasks = []; // 워커에게 보낼 준비된 작업 목록
         let processedCount = 0;
@@ -145,11 +181,55 @@
             }
             e.target.value = null;
         });
-        document.getElementById('file-input').addEventListener('change', (e) => { processFiles(e.target.files); e.target.value = null; });
-        document.getElementById('csv-file-input').addEventListener('change', (e) => { processCsvFiles(e.target.files); e.target.value = null; });
+        document.getElementById('file-input').addEventListener('change', (e) => {
+            processFiles(e.target.files);
+            if (e.target.files.length > 0) {
+                const path = e.target.files[0].path || e.target.files[0].webkitRelativePath; // path 속성은 Electron 등에서 사용 가능
+                if (path) {
+                    localStorage.setItem(e.target.dataset.lastPathKey, path.substring(0, path.lastIndexOf('/')));
+                }
+            }
+            e.target.value = null;
+        });
+        document.getElementById('csv-file-input').addEventListener('change', (e) => {
+            processCsvFiles(e.target.files);
+            if (e.target.files.length > 0) {
+                const path = e.target.files[0].path || e.target.files[0].webkitRelativePath;
+                if (path) {
+                    localStorage.setItem(e.target.dataset.lastPathKey, path.substring(0, path.lastIndexOf('/')));
+                }
+            }
+            e.target.value = null;
+        });
+        document.getElementById('json-file-input').addEventListener('change', (e) => {
+            processJsonFiles(e.target.files);
+            if (e.target.files.length > 0) {
+                const path = e.target.files[0].path || e.target.files[0].webkitRelativePath;
+                if (path) {
+                    localStorage.setItem(e.target.dataset.lastPathKey, path.substring(0, path.lastIndexOf('/')));
+                }
+            }
+            e.target.value = null;
+        });
         document.getElementById('clear-all-btn').addEventListener('click', clearAllLayers);
         document.getElementById('delete-selected-btn').addEventListener('click', deleteSelectedLayers);
         document.getElementById('cancel-processing-btn').addEventListener('click', cancelProcessing);
+        document.getElementById('toggle-base-map-btn').addEventListener('click', toggleBaseMap);
+
+        let osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' });
+        osmLayer.addTo(map); // 초기에는 지도에 추가
+
+        function toggleBaseMap() {
+            console.log("Toggle Base Map button clicked.");
+            if (map.hasLayer(osmLayer)) {
+                console.log("OSM layer is currently on. Turning off.");
+                map.removeLayer(osmLayer);
+            } else {
+                console.log("OSM layer is currently off. Turning on.");
+                map.addLayer(osmLayer);
+            }
+            console.log("OSM layer visibility after toggle: ", map.hasLayer(osmLayer));
+        }
 
         // Drag and Drop 이벤트 리스너 추가
         const mainSidebarCard = document.getElementById('main-sidebar-card');
@@ -175,13 +255,16 @@
             if (files.length > 0) {
                 const shpFiles = Array.from(files).filter(file => file.name.toLowerCase().endsWith('.shp'));
                 const csvFiles = Array.from(files).filter(file => file.name.toLowerCase().endsWith('.csv'));
+                const jsonFiles = Array.from(files).filter(file => file.name.toLowerCase().endsWith('.json'));
 
                 if (shpFiles.length > 0) {
                     processFiles(files); // shp, dbf, shx 등 관련 파일 모두 처리
                 } else if (csvFiles.length > 0) {
                     processCsvFiles(csvFiles); // CSV 파일만 처리
+                } else if (jsonFiles.length > 0) {
+                    processJsonFiles(jsonFiles); // JSON 파일만 처리
                 } else {
-                    alert("지원되지 않는 파일 형식입니다. .shp 또는 .csv 파일을 드롭해주세요.");
+                    alert("지원되지 않는 파일 형식입니다. .shp, .csv 또는 .json 파일을 드롭해주세요.");
                 }
             }
         });
@@ -252,6 +335,8 @@
             // 웹 워커 생성 및 메시지 리스너 설정
             shpWorker = new Worker('shp_worker.js');
 
+            const simplificationTolerance = parseFloat(document.getElementById('simplification-tolerance').value);
+
             shpWorker.onmessage = async (e) => { // async 추가
                 const { type, geojson, name, error, current, total } = e.data;
 
@@ -270,9 +355,20 @@
                     // 워커로부터 처리 완료된 GeoJSON 데이터 받기
                     try {
                         const layer = createGeoJSONLayer(geojson);
-                        loadedLayers[name] = { layer: layer, visible: true };
-                        map.addLayer(layer);
-                        // updateLayerList(); // <--- 이 호출을 제거합니다.
+                        // 여기서 해당 SHP 파일의 ID를 찾아 loadedLayers에 저장해야 합니다.
+                        // SHP 파일 이름 (name)과 CSV의 SOURCE 컬럼을 매칭하여 ID를 찾습니다.
+                        let layerId = null;
+                        for (const csvName in loadedCsvs) {
+                            if (loadedCsvs.hasOwnProperty(csvName)) {
+                                const csvData = parseCsvData(loadedCsvs[csvName].content);
+                                if (csvData[name] && csvData[name].ID) { // name은 SHP 파일 이름 (확장자 제외)
+                                    layerId = parseInt(csvData[name].ID, 10);
+                                    break;
+                                }
+                            }
+                        }
+                        loadedLayers[name] = { layer: layer, visible: true, id: layerId }; // id 추가
+                        // map.addLayer(layer); // 여기서 바로 추가하지 않고, 나중에 정렬 후 추가
                     } catch (err) {
                         console.error(`Error adding layer for ${name}:`, err);
                     }
@@ -300,6 +396,40 @@
                     progressModal.hide();
                     if (shpWorker) shpWorker.terminate();
                     shpWorker = null;
+
+                    // 모든 작업 완료 후 레이어 정렬 및 추가
+                    console.log("Loaded Layers before sorting:", loadedLayers);
+                    const sortedLayerNames = Object.keys(loadedLayers).sort((a, b) => {
+                        const idA = loadedLayers[a].id !== null ? loadedLayers[a].id : Infinity;
+                        const idB = loadedLayers[b].id !== null ? loadedLayers[b].id : Infinity;
+                        return idA - idB; // ID가 낮은 것이 먼저 오도록 (오름차순)
+                    });
+                    console.log("Sorted Layer Names (lowest ID last, for drawing on top):");
+                    sortedLayerNames.forEach(name => {
+                        console.log(`  ${name} (ID: ${loadedLayers[name].id})`);
+                    });
+
+                    // 기존 레이어 모두 제거 (loadedLayers에 있는 레이어만 제거)
+                    map.eachLayer(function(layer) {
+                        // Leaflet 레이어에 name 옵션이 없으므로, loadedLayers의 layer 객체와 비교
+                        for (const name in loadedLayers) {
+                            if (loadedLayers.hasOwnProperty(name) && loadedLayers[name].layer === layer) {
+                                map.removeLayer(layer);
+                                break;
+                            }
+                        }
+                    });
+
+                    // 정렬된 순서대로 레이어 추가
+                    console.log("Adding layers to map in sorted order:");
+                    sortedLayerNames.forEach(name => {
+                        const layerInfo = loadedLayers[name];
+                        if (layerInfo.visible) {
+                            map.addLayer(layerInfo.layer);
+                            console.log(`  Added layer: ${name} (ID: ${loadedLayers[name].id})`);
+                        }
+                    });
+
                     updateLayerList(); // <--- 모든 작업 완료 후 한 번만 호출합니다.
                     const allLoadedBounds = L.featureGroup(Object.values(loadedLayers).map(l => l.layer)).getBounds();
                     if(allLoadedBounds.isValid()) map.fitBounds(allLoadedBounds);
@@ -310,7 +440,7 @@
                     if (shpWorker) shpWorker.terminate();
                     shpWorker = null;
                     updateLayerList(); // <--- 취소 후 한 번만 호출합니다.
-                }
+                };
             };
 
             shpWorker.onerror = (error) => {
@@ -328,7 +458,7 @@
                 transferableObjects.push(task.shpBuffer, task.dbfBuffer);
                 if (task.prjBuffer) transferableObjects.push(task.prjBuffer);
             });
-            shpWorker.postMessage({ type: 'start_processing', payload: { tasks: processingTasks } }, transferableObjects);
+            shpWorker.postMessage({ type: 'start_processing', payload: { tasks: processingTasks, simplificationTolerance: simplificationTolerance } }, transferableObjects);
 
             if (duplicateLayerNames.length > 0) {
                 alert(`[정보] 선택한 파일 (${duplicateLayerNames.join(', ')})은(는) 이미 불러온 레이어입니다.`);
@@ -352,7 +482,6 @@
                         const content = await readFileAsText(file);
                         loadedCsvs[file.name] = { name: file.name, content: content };
                         updateCsvList();
-                        alert(`CSV 파일 로드 완료: ${file.name}`);
                     } catch (error) {
                         console.error(`CSV 파일 로드 중 오류 발생: ${file.name}`, error);
                         alert(`CSV 파일 로드 실패: ${file.name}`);
@@ -397,6 +526,59 @@
             });
         }
 
+        async function processJsonFiles(files) {
+            if (files.length === 0) return;
+
+            for (const file of Array.from(files)) {
+                if (file.name.toLowerCase().endsWith('.json')) {
+                    try {
+                        const content = await readFileAsText(file);
+                        loadedJsons[file.name] = { name: file.name, content: content };
+                        updateJsonList();
+                    } catch (error) {
+                        console.error(`JSON 파일 로드 중 오류 발생: ${file.name}`, error);
+                        alert(`JSON 파일 로드 실패: ${file.name}`);
+                    }
+                }
+            }
+        }
+
+        function updateJsonList() {
+            const container = document.getElementById('json-list-content');
+            container.innerHTML = '';
+            const jsonNames = Object.keys(loadedJsons);
+
+            if (jsonNames.length === 0) {
+                container.innerHTML = `<div class="text-center text-muted p-5"><i class="fa-solid fa-file-code fa-2x mb-3"></i><p>JSON 파일을 추가하세요.</p></div>`;
+                return;
+            }
+
+            jsonNames.forEach(name => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'layer-item'; // 기존 레이어 아이템 스타일 재활용
+                
+                const jsonNameSpan = document.createElement('span');
+                jsonNameSpan.className = 'layer-name';
+                jsonNameSpan.textContent = name;
+                itemDiv.appendChild(jsonNameSpan);
+
+                // 삭제 버튼 추가
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn btn-sm btn-danger';
+                deleteBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+                deleteBtn.title = 'JSON 삭제';
+                deleteBtn.addEventListener('click', () => {
+                    if (confirm(`JSON 파일 '${name}'을(를) 삭제하시겠습니까?`)) {
+                        delete loadedJsons[name];
+                        updateJsonList();
+                    }
+                });
+                itemDiv.appendChild(deleteBtn);
+
+                container.appendChild(itemDiv);
+            });
+        }
+
         function readFileAsText(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -412,7 +594,7 @@
             const layerNames = Object.keys(loadedLayers);
 
             if (layerNames.length === 0) {
-                container.innerHTML = `<div class="text-center text-muted p-5"><i class="fa-solid fa-layer-group fa-2x mb-3"></i><p>표시할 레이어가 없습니다.</p></div>`;
+                container.innerHTML = `<div class="text-center text-muted p-5"><i class="fa-solid fa-layer-group fa-2x mb-3"></i><p>폴더나 파일을 선택하여<br>레이어를 추가하세요.</p></div>`;
                 return;
             }
 
@@ -472,25 +654,90 @@
         }
 
         function clearAllLayers() {
-            if (Object.keys(loadedLayers).length === 0) { alert("삭제할 레이어가 없습니다."); return; }
-            if (confirm("정말로 모든 레이어를 삭제하시겠습니까?")) {
+            if (Object.keys(loadedLayers).length === 0 && Object.keys(loadedCsvs).length === 0 && Object.keys(loadedJsons).length === 0) { alert("삭제할 항목이 없습니다."); return; }
+            if (confirm("정말로 모든 레이어, CSV, JSON 파일을 삭제하시겠습니까?")) {
+                // 지도에서 모든 레이어 제거
                 Object.values(loadedLayers).forEach(item => map.removeLayer(item.layer));
                 loadedLayers = {};
+                
+                // 로드된 CSV 및 JSON 데이터 초기화
+                loadedCsvs = {};
+                loadedJsons = {};
+
+                // UI 업데이트
                 updateLayerList();
+                updateCsvList();
+                updateJsonList();
             }
         }
 
         function createGeoJSONLayer(geojson) {
             return L.geoJSON(geojson, {
                 style: (feature) => {
-                    const styleId = feature.properties.STYLE; // CSV의 STYLE 컬럼
-                    const style = styleMap[styleId];
+                    const featureShpFileName = feature.properties._shpFileName; // GeoJSON 피처의 _shpFileName 속성
+                    let matchedStyleId = null;
+                    let style = null;
+
+                    console.log(`Processing feature SHP File Name: ${featureShpFileName}`);
+
+                    // 1. 로드된 모든 CSV 파일을 순회하며 매칭되는 스타일 ID 찾기
+                    for (const csvName in loadedCsvs) {
+                        if (loadedCsvs.hasOwnProperty(csvName)) {
+                            const csvData = parseCsvData(loadedCsvs[csvName].content);
+                            // CSV의 SOURCE 컬럼과 매칭
+                            if (csvData[featureShpFileName] && csvData[featureShpFileName].STYLE) {
+                                matchedStyleId = parseInt(csvData[featureShpFileName].STYLE, 10);
+                                console.log(`  Matched in CSV (${csvName}): STYLE = ${matchedStyleId}`);
+                                break; // 매칭되는 스타일을 찾으면 중단
+                            }
+                        }
+                    }
+
+                    // 2. styleMap (기본 style_20241224_hkmc.json)에서 스타일 찾기
+                    if (matchedStyleId !== null) {
+                        style = styleMap[matchedStyleId];
+                        if (style) {
+                            console.log(`  Found style in styleMap for ID ${matchedStyleId}:`, style);
+                        }
+                    }
+
+                    // 3. 로드된 다른 JSON 파일에서 스타일 찾기 (필요하다면)
+                    if (!style) {
+                        for (const jsonName in loadedJsons) {
+                            if (loadedJsons.hasOwnProperty(jsonName)) {
+                                try {
+                                    const jsonData = JSON.parse(loadedJsons[jsonName].content);
+                                    // JSON 파일이 배열 형태이고, 각 객체가 id를 가지고 있다고 가정
+                                    if (Array.isArray(jsonData)) {
+                                        const foundStyle = jsonData.find(s => s.id === matchedStyleId);
+                                        if (foundStyle) {
+                                            style = foundStyle;
+                                            console.log(`  Found style in loaded JSON (${jsonName}) for ID ${matchedStyleId}:`, style);
+                                            break;
+                                        }
+                                    }
+                                    // JSON 파일이 { "id": style_object } 형태라고 가정
+                                    else if (jsonData[matchedStyleId]) {
+                                        style = jsonData[matchedStyleId];
+                                        console.log(`  Found style in loaded JSON (${jsonName}) for ID ${matchedStyleId}:`, style);
+                                        break;
+                                    }
+                                } catch (e) {
+                                    console.error(`JSON 파일 파싱 오류: ${jsonName}`, e);
+                                }
+                            }
+                        }
+                    }
+
                     if (style) {
-                        // bg_color와 color는 배열 안에 배열로 되어 있으므로 첫 번째 값을 사용
-                        const fillColor = style.bg_color && style.bg_color[0] ? `#${style.bg_color[0][0].substring(0, 6)}` : '#808080'; // 기본 회색
-                        const color = style.color && style.color[0] ? `#${style.color[0][0].substring(0, 6)}` : '#000000'; // 기본 검정
-                        const fillOpacity = style.bg_color && style.bg_color[0] ? parseInt(style.bg_color[0][0].substring(6, 8), 16) / 255 : 0.5;
-                        const opacity = style.color && style.color[0] ? parseInt(style.color[0][0].substring(6, 8), 16) / 255 : 1.0;
+                        // JSON의 color 항목을 사용하여 색상 설정
+                        const colorArray = style.color && style.color[0] ? style.color[0] : null;
+                        const fillColor = colorArray ? `#${colorArray[0].substring(0, 6)}` : '#808080'; // 첫 번째 색상을 채우기 색상으로
+                        const color = colorArray ? `#${colorArray[1].substring(0, 6)}` : '#000000'; // 두 번째 색상을 선 색상으로
+                        const fillOpacity = colorArray ? parseInt(colorArray[0].substring(6, 8), 16) / 255 : 0.5;
+                        const opacity = colorArray ? parseInt(colorArray[1].substring(6, 8), 16) / 255 : 1.0;
+
+                        console.log(`  Applying style: fillColor=${fillColor}, color=${color}, fillOpacity=${fillOpacity}, opacity=${opacity}`);
 
                         return {
                             fillColor: fillColor,
@@ -500,6 +747,7 @@
                             fillOpacity: fillOpacity
                         };
                     }
+                    console.log(`  No style found for ${featureShpFileName}. Using default.`);
                     return { color: '#000000', weight: 2, opacity: 1, fillColor: '#808080', fillOpacity: 0.5 }; // 기본 스타일
                 },
                 onEachFeature: (feature, layer) => {
@@ -522,11 +770,33 @@
             });
         }
 
+        // CSV 데이터를 파싱하여 맵 형태로 저장
+        function parseCsvData(csvContent) {
+            const lines = csvContent.split('\n').filter(line => line.trim() !== '');
+            if (lines.length === 0) return {};
+            
+            const headers = lines[0].split(',');
+            const dataMap = {};
+            
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',');
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header.trim()] = values[index] ? values[index].trim() : '';
+                });
+                // SOURCE 컬럼을 키로 사용
+                if (row.SOURCE) { // NAME 대신 SOURCE 사용
+                    dataMap[row.SOURCE] = row;
+                }
+            }
+            return dataMap;
+        }
+
         let styleMap = {}; // 스타일 정보를 저장할 객체
 
         async function loadStyles() {
             try {
-                const response = await fetch('./config/style_20241224_hkmc.json');
+                const response = await fetch('./config/style_20241224_hkmc.json'); // 로컬 경로로 변경
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }

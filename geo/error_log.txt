@@ -1,61 +1,134 @@
-Live reload enabled.
- Loading simplify.js from: ./simplify.min.js
-shape.html:249 Web Worker error: 
-ErrorEvent
-isTrusted
-: 
-true
-bubbles
-: 
-false
-cancelBubble
-: 
-false
-cancelable
-: 
-true
-colno
-: 
-1
-composed
-: 
-false
-currentTarget
-: 
-Window {window: Window, self: Window, document: document, name: '', location: Location, …}
-defaultPrevented
-: 
-false
-error
-: 
-null
-eventPhase
-: 
-0
-filename
-: 
-"http://127.0.0.1:5501/shp_worker.js"
-lineno
-: 
-8
-message
-: 
-"Uncaught NetworkError: Failed to execute 'importScripts' on 'WorkerGlobalScope': The script at 'http://127.0.0.1:5501/simplify.min.js' failed to load."
-returnValue
-: 
-true
-srcElement
-: 
-Window {window: Window, self: Window, document: document, name: '', location: Location, …}
-target
-: 
-Window {window: Window, self: Window, document: document, name: '', location: Location, …}
-timeStamp
-: 
-6297.699999809265
-type
-: 
-"error"
-[[Prototype]]
-: 
-ErrorEvent
+ ╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+ │ ✔  Edit shape.html:         #main-sidebar-card { h... =>         #main-sidebar-card { h...                                                                                                 │
+ │                                                                                                                                                                                            │
+ │    20     .card-body.tab-content { display: flex; flex-direction: column; flex-grow: 1; }                                                                                                  │
+ │    21     .tab-pane.fade { display: flex; flex-direction: column; flex-grow: 1; }                                                                                                          │
+ │    22     #main-sidebar-card { height: 80vh; display: flex; flex-direction: column; }                                                                                                      │
+ │    23   - #layer-list-content, #csv-list-content, #json-list-content { overflow-y: auto; flex-grow: 1; }                                                                                   │
+ │    23   + #layer-list-content, #csv-list-content, #json-list-content {                                                                                                                     │
+ │    24   +     overflow-y: auto;                                                                                                                                                            │
+ │    25   +     flex-grow: 1;                                                                                                                                                                │
+ │    26   +     height: calc(80vh - 50px); /* Adjust height based on header/footer */                                                                                                        │
+ │    27   + }                                                                                                                                                                                │
+ │    28     .layer-item { display: flex; align-items: center; padding: 0.75rem;                                                                                                              │
+ │    29         border-bottom: 1px solid #eee; }                                                                                                                                             │
+ │    30     .layer-item:last-child { border-bottom: none; }                                                                                                                                  │
+ │    ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════  │
+ │    62                     </label>                                                                                                                                                         │
+ │    63                 </div>                                                                                                                                                               │
+ │    64                 <div class="btn-group" role="group">                                                                                                                                 │
+ │    61   -                  <button id="toggle-base-map-btn" class="btn btn-secondary btn-icon-text">                                                                                       │
+ │    62   -                     <i class="fa-solid fa-map"></i> 배경 지도 On/Off                                                                                                             │
+ │    65   +                  <button id="toggle-osm-map-btn" class="btn btn-secondary btn-icon-text">                                                                                        │
+ │    66   +                     <i class="fa-solid fa-map"></i> OSM 지도 On/Off                                                                                                              │
+ │    67                     </button>                                                                                                                                                        │
+ │    68   +                  <button id="toggle-google-map-btn" class="btn btn-secondary btn-icon-text">                                                                                     │
+ │    69   +                     <i class="fa-brands fa-google"></i> Google 지도 On/Off                                                                                                       │
+ │    70   +                 </button>                                                                                                                                                        │
+ │    71                      <button id="delete-selected-btn" class="btn btn-danger btn-icon-text">                                                                                          │
+ │    72                         <i class="fa-solid fa-check-square fa-fw"></i> 선택 삭제                                                                                                     │
+ │    73                     </button>                                                                                                                                                        │
+ │    ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════  │
+ │    102                </div>                                                                                                                                                               │
+ │    103                <div class="card-body p-0 tab-content" id="myTabContent">                                                                                                            │
+ │    104                    <div class="tab-pane fade show active" id="layers" role="tabpanel" aria-labelledby="layers-tab">                                                                 │
+ │    98   -                     <div id="layer-list-content" class="p-0">                                                                                                                    │
+ │    ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════  │
+ │    105  +                     <div id="layer-list-content">                                                                                                                                │
+ │    106                            <div class="text-center text-muted p-5">                                                                                                                 │
+ │    107                                <i class="fa-solid fa-file-import fa-2x mb-3"></i>                                                                                                   │
+ │    108                                <p>폴더나 파일을 선택하여<br>레이어를 추가하세요.</p>                                                                                                │
+ │    110                        </div>                                                                                                                                                       │
+ │    111                    </div>                                                                                                                                                           │
+ │    112                    <div class="tab-pane fade" id="csv" role="tabpanel" aria-labelledby="csv-tab">                                                                                   │
+ │    106  -                     <div id="csv-list-content" class="p-0">                                                                                                                      │
+ │    ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════  │
+ │    113  +                     <div id="csv-list-content">                                                                                                                                  │
+ │    114                            <div class="text-center text-muted p-5">                                                                                                                 │
+ │    115                                <i class="fa-solid fa-file-csv fa-2x mb-3"></i>                                                                                                      │
+ │    116                                <p>CSV 파일을 추가하세요.</p>                                                                                                                        │
+ │    118                        </div>                                                                                                                                                       │
+ │    119                    </div>                                                                                                                                                           │
+ │    120                    <div class="tab-pane fade" id="json" role="tabpanel" aria-labelledby="json-tab">                                                                                 │
+ │    114  -                     <div id="json-list-content" class="p-0">                                                                                                                     │
+ │    ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════  │
+ │    121  +                     <div id="json-list-content">                                                                                                                                 │
+ │    122                            <div class="text-center text-muted p-5">                                                                                                                 │
+ │    123                                <i class="fa-solid fa-file-code fa-2x mb-3"></i>                                                                                                     │
+ │    124                                <p>JSON 파일을 추가하세요.</p>                                                                                                                       │
+ │    ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════  │
+ │    167                                                                                                                                                                                     │
+ │    168    const progressModal = new bootstrap.Modal(document.getElementById('progressModal'));                                                                                             │
+ │    169                                                                                                                                                                                     │
+ │    163  - L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'       │
+ │           }).addTo(map);                                                                                                                                                                   │
+ │    ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════  │
+ │    170  + // Base Layers                                                                                                                                                                   │
+ │    171  + const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {                                                                                             │
+ │    172  +     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'                                                                       │
+ │    173  + });                                                                                                                                                                              │
+ │    174                                                                                                                                                                                     │
+ │    175  + const googleSat = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',{                                                                                              │
+ │    176  +     maxZoom: 20,                                                                                                                                                                 │
+ │    177  +     subdomains:['mt0','mt1','mt2','mt3'],                                                                                                                                        │
+ │    178  +     attribution: 'Google Satellite'                                                                                                                                              │
+ │    179  + });                                                                                                                                                                              │
+ │    180  +                                                                                                                                                                                  │
+ │    181  + osmLayer.addTo(map); // Default layer                                                                                                                                            │
+ │    182  +                                                                                                                                                                                  │
+ │    183  + document.getElementById('toggle-osm-map-btn').addEventListener('click', () => {                                                                                                  │
+ │    184  +     if (map.hasLayer(osmLayer)) {                                                                                                                                                │
+ │    185  +         map.removeLayer(osmLayer);                                                                                                                                               │
+ │    186  +     } else {                                                                                                                                                                     │
+ │    187  +         osmLayer.addTo(map);                                                                                                                                                     │
+ │    188  +     }                                                                                                                                                                            │
+ │    189  + });                                                                                                                                                                              │
+ │    190  +                                                                                                                                                                                  │
+ │    191  + document.getElementById('toggle-google-map-btn').addEventListener('click', () => {                                                                                               │
+ │    192  +     if (map.hasLayer(googleSat)) {                                                                                                                                               │
+ │    193  +         map.removeLayer(googleSat);                                                                                                                                              │
+ │    194  +     } else {                                                                                                                                                                     │
+ │    195  +         googleSat.addTo(map);                                                                                                                                                    │
+ │    196  +     }                                                                                                                                                                            │
+ │    197  + });                                                                                                                                                                              │
+ │    198  +                                                                                                                                                                                  │
+ │    199  +                                                                                                                                                                                  │
+ │    200    document.getElementById('folder-input').addEventListener('change', (e) => {                                                                                                      │
+ │    201        processFiles(e.target.files);                                                                                                                                                │
+ │    202        if (e.target.files.length > 0 && e.target.files[0].webkitRelativePath) {                                                                                                     │
+ │    ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════  │
+ │    238    document.getElementById('clear-all-btn').addEventListener('click', clearAllLayers);                                                                                              │
+ │    239    document.getElementById('delete-selected-btn').addEventListener('click', deleteSelectedLayers);                                                                                  │
+ │    240    document.getElementById('cancel-processing-btn').addEventListener('click', cancelProcessing);                                                                                    │
+ │    206  - document.getElementById('toggle-base-map-btn').addEventListener('click', toggleBaseMap);                                                                                         │
+ │    ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════  │
+ │    241                                                                                                                                                                                     │
+ │    208  - let osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>      │
+ │           contributors' });                                                                                                                                                                │
+ │    209  - osmLayer.addTo(map); // 초기에는 지도에 추가                                                                                                                                     │
+ │    210  -                                                                                                                                                                                  │
+ │    211  - function toggleBaseMap() {                                                                                                                                                       │
+ │    212  -     if (map.hasLayer(osmLayer)) {                                                                                                                                                │
+ │    213  -         map.removeLayer(osmLayer);                                                                                                                                               │
+ │    214  -     } else {                                                                                                                                                                     │
+ │    215  -         map.addLayer(osmLayer);                                                                                                                                                  │
+ │    216  -     }                                                                                                                                                                            │
+ │    217  - }                                                                                                                                                                                │
+ │    218  -                                                                                                                                                                                  │
+ │    ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════  │
+ │    242    // Drag and Drop 이벤트 리스너 추가                                                                                                                                              │
+ │    243    const mainSidebarCard = document.getElementById('main-sidebar-card');                                                                                                            │
+ │    244                                                                                                                                                                                     │
+ │    ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════  │
+ │    599    function updateLayerList() {                                                                                                                                                     │
+ │    600        const container = document.getElementById('layer-list-content');                                                                                                             │
+ │    601        container.innerHTML = '';                                                                                                                                                    │
+ │    579  -     const layerNames = Object.keys(loadedLayers);                                                                                                                                │
+ │    ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════  │
+ │    602  +     const layerNames = Object.keys(loadedLayers).reverse(); // Reverse the order of layers                                                                                       │
+ │    603                                                                                                                                                                                     │
+ │    604        if (layerNames.length === 0) {                                                                                                                                               │
+ │    605            container.innerHTML = `<div class="text-center text-muted p-5"><i class="fa-solid fa-layer-group fa-2x mb-3"></i><p>폴더나 파일을 선택하여<br>레이어를                   │
+ │           추가하세요.</p></div>`;                                                                                                                                                          │
+ ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+✦ shape.html 파일이 성공적으로 수정되었습니다.
