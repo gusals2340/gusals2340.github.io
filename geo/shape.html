@@ -83,6 +83,7 @@
         .btn-icon-text .fa-fw { margin-right: 0.5rem; }
         .drag-over { border: 2px dashed #007bff; background-color: #e9f5ff; }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="container-fluid my-3">
@@ -101,15 +102,7 @@
                         </label>
                         <label for="file-input" class="btn btn-primary btn-icon-text">
                             <i class="fa-solid fa-file-lines fa-fw"></i> 파일 추가
-                            <input type="file" id="file-input" accept=".shp,.shx,.dbf,.prj,.cpg" multiple style="display: none;" data-last-path-key="lastFileOpenPath">
-                        </label>
-                        <label for="csv-file-input" class="btn btn-info btn-icon-text">
-                            <i class="fa-solid fa-file-csv fa-fw"></i> CSV 추가
-                            <input type="file" id="csv-file-input" accept=".csv" multiple style="display: none;" data-last-path-key="lastCsvOpenPath">
-                        </label>
-                        <label for="json-file-input" class="btn btn-warning btn-icon-text">
-                            <i class="fa-solid fa-file-code fa-fw"></i> JSON 추가
-                            <input type="file" id="json-file-input" accept=".json" multiple style="display: none;" data-last-path-key="lastJsonOpenPath">
+                            <input type="file" id="file-input" accept=".shp,.shx,.dbf,.prj,.cpg,.xlsx,.json" multiple style="display: none;" data-last-path-key="lastFileOpenPath">
                         </label>
                     </div>
                     <div class="btn-group" role="group">
@@ -141,7 +134,7 @@
                                 <button class="nav-link active" id="layers-tab" data-bs-toggle="tab" data-bs-target="#layers" type="button" role="tab" aria-controls="layers" aria-selected="true"><i class="fa-solid fa-layer-group"></i> 레이어</button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="csv-tab" data-bs-toggle="tab" data-bs-target="#csv" type="button" role="tab" aria-controls="csv" aria-selected="false"><i class="fa-solid fa-file-csv"></i> CSV</button>
+                                <button class="nav-link" id="xlsx-tab" data-bs-toggle="tab" data-bs-target="#xlsx" type="button" role="tab" aria-controls="xlsx" aria-selected="false"><i class="fa-solid fa-file-excel"></i> XLSX</button>
                             </li>
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link" id="json-tab" data-bs-toggle="tab" data-bs-target="#json" type="button" role="tab" aria-controls="json" aria-selected="false"><i class="fa-solid fa-file-code"></i> JSON</button>
@@ -157,11 +150,11 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="tab-pane fade" id="csv" role="tabpanel" aria-labelledby="csv-tab">
-                            <div id="csv-list-content" class="p-0">
-                                <div class="text-center text-muted p-5">
-                                    <i class="fa-solid fa-file-csv fa-2x mb-3"></i>
-                                    <p>CSV 파일을 추가하세요.</p>
+                        <div class="tab-pane fade" id="xlsx" role="tabpanel" aria-labelledby="xlsx-tab">
+                            <div id="xlsx-list-content" class="p-0">
+                                <div class="text-center text-muted p-2">
+                                    <i class="fa-solid fa-file-excel fa-2x mb-3"></i>
+                                    <p>XLSX 파일을 추가하세요.</p>
                                 </div>
                             </div>
                         </div>
@@ -208,6 +201,7 @@
         let loadedLayers = {};
         let loadedCsvs = {}; // 로드된 CSV 파일 정보를 저장할 객체
         let loadedJsons = {}; // 로드된 JSON 파일 정보를 저장할 객체
+        let loadedXlsx = {};
         let shpWorker = null; // 웹 워커 인스턴스
         let processingTasks = []; // 워커에게 보낼 준비된 작업 목록
         let processedCount = 0;
@@ -226,27 +220,7 @@
             e.target.value = null;
         });
         document.getElementById('file-input').addEventListener('change', (e) => {
-            processFiles(e.target.files);
-            if (e.target.files.length > 0) {
-                const path = e.target.files[0].path || e.target.files[0].webkitRelativePath; // path 속성은 Electron 등에서 사용 가능
-                if (path) {
-                    localStorage.setItem(e.target.dataset.lastPathKey, path.substring(0, path.lastIndexOf('/')));
-                }
-            }
-            e.target.value = null;
-        });
-        document.getElementById('csv-file-input').addEventListener('change', (e) => {
-            processCsvFiles(e.target.files);
-            if (e.target.files.length > 0) {
-                const path = e.target.files[0].path || e.target.files[0].webkitRelativePath;
-                if (path) {
-                    localStorage.setItem(e.target.dataset.lastPathKey, path.substring(0, path.lastIndexOf('/')));
-                }
-            }
-            e.target.value = null;
-        });
-        document.getElementById('json-file-input').addEventListener('change', (e) => {
-            processJsonFiles(e.target.files);
+            handleAllFiles(e.target.files);
             if (e.target.files.length > 0) {
                 const path = e.target.files[0].path || e.target.files[0].webkitRelativePath;
                 if (path) {
@@ -291,25 +265,12 @@
         });
 
         mainSidebarCard.addEventListener('drop', (e) => {
-            e.preventDefault(); // 기본 동작 방지 (파일 열림 방지)
+            e.preventDefault();
             e.stopPropagation();
             mainSidebarCard.classList.remove('drag-over');
-
             const files = e.dataTransfer.files;
             if (files.length > 0) {
-                const shpFiles = Array.from(files).filter(file => file.name.toLowerCase().endsWith('.shp'));
-                const csvFiles = Array.from(files).filter(file => file.name.toLowerCase().endsWith('.csv'));
-                const jsonFiles = Array.from(files).filter(file => file.name.toLowerCase().endsWith('.json'));
-
-                if (shpFiles.length > 0) {
-                    processFiles(files); // shp, dbf, shx 등 관련 파일 모두 처리
-                } else if (csvFiles.length > 0) {
-                    processCsvFiles(csvFiles); // CSV 파일만 처리
-                } else if (jsonFiles.length > 0) {
-                    processJsonFiles(jsonFiles); // JSON 파일만 처리
-                } else {
-                    alert("지원되지 않는 파일 형식입니다. .shp, .csv 또는 .json 파일을 드롭해주세요.");
-                }
+                handleAllFiles(files);
             }
         });
 
@@ -517,59 +478,6 @@
             }
         }
 
-        async function processCsvFiles(files) {
-            if (files.length === 0) return;
-
-            for (const file of Array.from(files)) {
-                if (file.name.toLowerCase().endsWith('.csv')) {
-                    try {
-                        const content = await readFileAsText(file);
-                        loadedCsvs[file.name] = { name: file.name, content: content };
-                        updateCsvList();
-                    } catch (error) {
-                        console.error(`CSV 파일 로드 중 오류 발생: ${file.name}`, error);
-                        alert(`CSV 파일 로드 실패: ${file.name}`);
-                    }
-                }
-            }
-        }
-
-        function updateCsvList() {
-            const container = document.getElementById('csv-list-content');
-            container.innerHTML = '';
-            const csvNames = Object.keys(loadedCsvs);
-
-            if (csvNames.length === 0) {
-                container.innerHTML = `<div class="text-center text-muted p-5"><i class="fa-solid fa-file-csv fa-2x mb-3"></i><p>CSV 파일을 추가하세요.</p></div>`;
-                return;
-            }
-
-            csvNames.forEach(name => {
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'layer-item'; // 기존 레이어 아이템 스타일 재활용
-                
-                const csvNameSpan = document.createElement('span');
-                csvNameSpan.className = 'layer-name';
-                csvNameSpan.textContent = name;
-                itemDiv.appendChild(csvNameSpan);
-
-                // 삭제 버튼 추가
-                const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'btn btn-sm btn-danger';
-                deleteBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
-                deleteBtn.title = 'CSV 삭제';
-                deleteBtn.addEventListener('click', () => {
-                    if (confirm(`CSV 파일 '${name}'을(를) 삭제하시겠습니까?`)) {
-                        delete loadedCsvs[name];
-                        updateCsvList();
-                    }
-                });
-                itemDiv.appendChild(deleteBtn);
-
-                container.appendChild(itemDiv);
-            });
-        }
-
         async function processJsonFiles(files) {
             if (files.length === 0) return;
 
@@ -698,8 +606,8 @@
         }
 
         function clearAllLayers() {
-            if (Object.keys(loadedLayers).length === 0 && Object.keys(loadedCsvs).length === 0 && Object.keys(loadedJsons).length === 0) { alert("삭제할 항목이 없습니다."); return; }
-            if (confirm("정말로 모든 레이어, CSV, JSON 파일을 삭제하시겠습니까?")) {
+            if (Object.keys(loadedLayers).length === 0 && Object.keys(loadedCsvs).length === 0 && Object.keys(loadedJsons).length === 0 && Object.keys(loadedXlsx).length === 0) { alert("삭제할 항목이 없습니다."); return; }
+            if (confirm("정말로 모든 레이어, CSV, JSON, XLSX 파일을 삭제하시겠습니까?")) {
                 // 지도에서 모든 레이어 제거
                 Object.values(loadedLayers).forEach(item => map.removeLayer(item.layer));
                 loadedLayers = {};
@@ -707,63 +615,54 @@
                 // 로드된 CSV 및 JSON 데이터 초기화
                 loadedCsvs = {};
                 loadedJsons = {};
+                loadedXlsx = {};
 
                 // UI 업데이트
                 updateLayerList();
                 updateCsvList();
                 updateJsonList();
+                updateXlsxList();
             }
         }
 
         function createGeoJSONLayer(geojson) {
             return L.geoJSON(geojson, {
                 style: (feature) => {
-                    const featureShpFileName = feature.properties._shpFileName; // GeoJSON 피처의 _shpFileName 속성
+                    const featureShpFileName = feature.properties._shpFileName;
                     let matchedStyleId = null;
                     let style = null;
 
-                    console.log(`Processing feature SHP File Name: ${featureShpFileName}`);
-
-                    // 1. 로드된 모든 CSV 파일을 순회하며 매칭되는 스타일 ID 찾기
-                    for (const csvName in loadedCsvs) {
-                        if (loadedCsvs.hasOwnProperty(csvName)) {
-                            const csvData = parseCsvData(loadedCsvs[csvName].content);
-                            // CSV의 SOURCE 컬럼과 매칭
+                    // CSV + XLSX 모두 순회하며 매칭되는 스타일 ID 찾기
+                    const allCsvSources = { ...loadedCsvs, ...loadedXlsx };
+                    for (const csvName in allCsvSources) {
+                        if (allCsvSources.hasOwnProperty(csvName)) {
+                            const csvData = parseCsvData(allCsvSources[csvName].content);
                             if (csvData[featureShpFileName] && csvData[featureShpFileName].STYLE) {
                                 matchedStyleId = parseInt(csvData[featureShpFileName].STYLE, 10);
-                                console.log(`  Matched in CSV (${csvName}): STYLE = ${matchedStyleId}`);
-                                break; // 매칭되는 스타일을 찾으면 중단
+                                break;
                             }
                         }
                     }
 
-                    // 2. styleMap (기본 style_20241224_hkmc.json)에서 스타일 찾기
+                    // styleMap (기본 style_20241224_hkmc.json)에서 스타일 찾기
                     if (matchedStyleId !== null) {
                         style = styleMap[matchedStyleId];
-                        if (style) {
-                            console.log(`  Found style in styleMap for ID ${matchedStyleId}:`, style);
-                        }
                     }
 
-                    // 3. 로드된 다른 JSON 파일에서 스타일 찾기 (필요하다면)
+                    // 로드된 다른 JSON 파일에서 스타일 찾기 (필요하다면)
                     if (!style) {
                         for (const jsonName in loadedJsons) {
                             if (loadedJsons.hasOwnProperty(jsonName)) {
                                 try {
                                     const jsonData = JSON.parse(loadedJsons[jsonName].content);
-                                    // JSON 파일이 배열 형태이고, 각 객체가 id를 가지고 있다고 가정
                                     if (Array.isArray(jsonData)) {
                                         const foundStyle = jsonData.find(s => s.id === matchedStyleId);
                                         if (foundStyle) {
                                             style = foundStyle;
-                                            console.log(`  Found style in loaded JSON (${jsonName}) for ID ${matchedStyleId}:`, style);
                                             break;
                                         }
-                                    }
-                                    // JSON 파일이 { "id": style_object } 형태라고 가정
-                                    else if (jsonData[matchedStyleId]) {
+                                    } else if (jsonData[matchedStyleId]) {
                                         style = jsonData[matchedStyleId];
-                                        console.log(`  Found style in loaded JSON (${jsonName}) for ID ${matchedStyleId}:`, style);
                                         break;
                                     }
                                 } catch (e) {
@@ -774,15 +673,11 @@
                     }
 
                     if (style) {
-                        // JSON의 color 항목을 사용하여 색상 설정
                         const colorArray = style.color && style.color[0] ? style.color[0] : null;
-                        const fillColor = colorArray ? `#${colorArray[0].substring(0, 6)}` : '#808080'; // 첫 번째 색상을 채우기 색상으로
-                        const color = colorArray ? `#${colorArray[1].substring(0, 6)}` : '#000000'; // 두 번째 색상을 선 색상으로
+                        const fillColor = colorArray ? `#${colorArray[0].substring(0, 6)}` : '#808080';
+                        const color = colorArray ? `#${colorArray[1].substring(0, 6)}` : '#000000';
                         const fillOpacity = colorArray ? parseInt(colorArray[0].substring(6, 8), 16) / 255 : 0.5;
                         const opacity = colorArray ? parseInt(colorArray[1].substring(6, 8), 16) / 255 : 1.0;
-
-                        console.log(`  Applying style: fillColor=${fillColor}, color=${color}, fillOpacity=${fillOpacity}, opacity=${opacity}`);
-
                         return {
                             fillColor: fillColor,
                             color: color,
@@ -791,8 +686,7 @@
                             fillOpacity: fillOpacity
                         };
                     }
-                    console.log(`  No style found for ${featureShpFileName}. Using default.`);
-                    return { color: '#000000', weight: 2, opacity: 1, fillColor: '#808080', fillOpacity: 0.5 }; // 기본 스타일
+                    return { color: '#000000', weight: 2, opacity: 1, fillColor: '#808080', fillOpacity: 0.5 };
                 },
                 onEachFeature: (feature, layer) => {
                     if (feature.properties) {
@@ -856,6 +750,96 @@
 
         // 페이지 로드 시 스타일 로드
         loadStyles();
+
+        async function processXlsxFiles(files) {
+            if (files.length === 0) return;
+            for (const file of Array.from(files)) {
+                if (file.name.toLowerCase().endsWith('.xlsx')) {
+                    try {
+                        const data = await file.arrayBuffer();
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        workbook.SheetNames.forEach(sheetName => {
+                            const csvContent = XLSX.utils.sheet_to_csv(workbook.Sheets[sheetName]);
+                            const key = `${file.name.replace(/\.xlsx$/i, '')}_${sheetName}.csv`;
+                            loadedXlsx[key] = { name: key, content: csvContent };
+                        });
+                        updateXlsxList();
+                    } catch (error) {
+                        console.error(`XLSX 파일 로드 중 오류 발생: ${file.name}`, error);
+                        alert(`XLSX 파일 로드 실패: ${file.name}`);
+                    }
+                }
+            }
+        }
+
+        function updateXlsxList() {
+            const container = document.getElementById('xlsx-list-content');
+            container.innerHTML = '';
+            const xlsxNames = Object.keys(loadedXlsx);
+            if (xlsxNames.length === 0) {
+                container.innerHTML = `<div class="text-center text-muted p-2"><i class="fa-solid fa-file-excel fa-2x mb-3"></i><p>XLSX 파일을 추가하세요.</p></div>`;
+                return;
+            }
+            [...xlsxNames].reverse().forEach(name => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'layer-item';
+                // 전체선택용 체크박스
+                const selectCheckbox = document.createElement('input');
+                selectCheckbox.className = 'form-check-input xlsx-check';
+                selectCheckbox.type = 'checkbox';
+                selectCheckbox.dataset.xlsxName = name;
+                itemDiv.appendChild(selectCheckbox);
+                // 이름
+                const xlsxNameSpan = document.createElement('span');
+                xlsxNameSpan.className = 'layer-name';
+                xlsxNameSpan.textContent = name;
+                itemDiv.appendChild(xlsxNameSpan);
+                // 삭제 버튼
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn btn-sm btn-danger';
+                deleteBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+                deleteBtn.title = 'XLSX 삭제';
+                deleteBtn.addEventListener('click', () => {
+                    if (confirm(`XLSX 파일 '${name}'을(를) 삭제하시겠습니까?`)) {
+                        delete loadedXlsx[name];
+                        updateXlsxList();
+                    }
+                });
+                itemDiv.appendChild(deleteBtn);
+                container.appendChild(itemDiv);
+            });
+        }
+
+        function deleteSelectedXlsx() {
+            const checkboxes = document.querySelectorAll('#xlsx-list-content .xlsx-check:checked');
+            if (checkboxes.length === 0) { alert('삭제할 XLSX를 선택하세요.'); return; }
+            checkboxes.forEach(cb => {
+                const name = cb.getAttribute('data-xlsx-name');
+                if (loadedXlsx[name]) delete loadedXlsx[name];
+            });
+            updateXlsxList();
+        }
+
+        function handleAllFiles(files) {
+            if (!files || files.length === 0) return;
+            const shpFiles = Array.from(files).filter(file => file.name.toLowerCase().endsWith('.shp'));
+            const dbfFiles = Array.from(files).filter(file => file.name.toLowerCase().endsWith('.dbf'));
+            const shxFiles = Array.from(files).filter(file => file.name.toLowerCase().endsWith('.shx'));
+            const prjFiles = Array.from(files).filter(file => file.name.toLowerCase().endsWith('.prj'));
+            const cpgFiles = Array.from(files).filter(file => file.name.toLowerCase().endsWith('.cpg'));
+            const xlsxFiles = Array.from(files).filter(file => file.name.toLowerCase().endsWith('.xlsx'));
+            const jsonFiles = Array.from(files).filter(file => file.name.toLowerCase().endsWith('.json'));
+            // shp, dbf, shx 중 하나라도 있으면 레이어 처리
+            if (shpFiles.length > 0 || dbfFiles.length > 0 || shxFiles.length > 0) {
+                processFiles(files);
+            }
+            if (xlsxFiles.length > 0) {
+                processXlsxFiles(xlsxFiles);
+            }
+            if (jsonFiles.length > 0) {
+                processJsonFiles(jsonFiles);
+            }
+        }
 
     </script>
 </body>
