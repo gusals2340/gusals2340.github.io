@@ -21,11 +21,10 @@
             height: 80vh;
             align-items: stretch;
         }
-        .col-lg-8, .col-lg-4 {
+        .col-lg-4, .col-lg-8 {
             height: 100%;
         }
-        #main-sidebar-card,
-        .card.card-custom {
+        #main-sidebar-card {
             height: 100%;
             display: flex;
             flex-direction: column;
@@ -45,16 +44,16 @@
             flex-direction: column;
         }
         #layer-list-content,
-        #csv-list-content,
+        #xlsx-list-content,
         #json-list-content {
             flex: 1 1 auto;
-            min-height: 0;
             height: 100%;
+            min-height: 0;
             overflow-y: auto;
             position: relative;
         }
         #layer-list-content .text-center,
-        #csv-list-content .text-center,
+        #xlsx-list-content .text-center,
         #json-list-content .text-center {
             display: flex;
             flex-direction: column;
@@ -90,7 +89,11 @@
         <header class="bg-white p-3 rounded-3 card-custom mb-3"> 
             <div class="d-flex flex-wrap align-items-center justify-content-between">
                 <h1 class="h4 mb-0 me-3"><i class="fas fa-map-location-dot text-primary"></i> Advanced SHP Viewer</h1>
-                <div class="btn-toolbar">
+                <div class="btn-toolbar align-items-center">
+                    <div class="form-check form-switch d-flex align-items-center me-2">
+                        <input class="form-check-input" type="checkbox" id="toggle-base-map-switch" checked>
+                        <label class="form-check-label ms-2" for="toggle-base-map-switch">배경 지도</label>
+                    </div>
                     <div class="input-group me-2">
                         <span class="input-group-text">단순화 허용 오차</span>
                         <input type="number" id="simplification-tolerance" class="form-control" value="0.0001" step="0.0001" min="0">
@@ -106,9 +109,6 @@
                         </label>
                     </div>
                     <div class="btn-group" role="group">
-                         <button id="toggle-base-map-btn" class="btn btn-secondary btn-icon-text">
-                            <i class="fa-solid fa-map"></i> 배경 지도 On/Off
-                        </button>
                          <button id="delete-selected-btn" class="btn btn-danger btn-icon-text">
                             <i class="fa-solid fa-check-square fa-fw"></i> 선택 삭제
                         </button>
@@ -123,7 +123,8 @@
         <div class="row g-3">
             <div class="col-lg-8">
                 <div class="card card-custom h-100">
-                    <div id="map" class="card-body p-0"></div>
+                    <div id="map" class="card-body p-0" style="position: relative;">
+                    </div>
                 </div>
             </div>
             <div class="col-lg-4">
@@ -232,22 +233,29 @@
         document.getElementById('clear-all-btn').addEventListener('click', clearAllLayers);
         document.getElementById('delete-selected-btn').addEventListener('click', deleteSelectedLayers);
         document.getElementById('cancel-processing-btn').addEventListener('click', cancelProcessing);
-        document.getElementById('toggle-base-map-btn').addEventListener('click', toggleBaseMap);
 
         let osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' });
         osmLayer.addTo(map); // 초기에는 지도에 추가
 
-        function toggleBaseMap() {
-            console.log("Toggle Base Map button clicked.");
-            if (map.hasLayer(osmLayer)) {
-                console.log("OSM layer is currently on. Turning off.");
-                map.removeLayer(osmLayer);
+        const toggleBaseMapSwitch = document.getElementById('toggle-base-map-switch');
+        toggleBaseMapSwitch.addEventListener('change', function() {
+            const tilePane = document.querySelector('.leaflet-pane.leaflet-tile-pane');
+            const leafletContainer = document.querySelector('.leaflet-container');
+            if (toggleBaseMapSwitch.checked) {
+                if (!map.hasLayer(osmLayer)) map.addLayer(osmLayer);
+                if (tilePane) tilePane.style.background = '';
+                if (leafletContainer) leafletContainer.style.background = '';
             } else {
-                console.log("OSM layer is currently off. Turning on.");
-                map.addLayer(osmLayer);
+                // 모든 타일 레이어 제거
+                map.eachLayer(function(layer) {
+                    if (layer instanceof L.TileLayer) {
+                        map.removeLayer(layer);
+                    }
+                });
+                if (tilePane) tilePane.style.background = '#fff';
+                if (leafletContainer) leafletContainer.style.background = '#fff';
             }
-            console.log("OSM layer visibility after toggle: ", map.hasLayer(osmLayer));
-        }
+        });
 
         // Drag and Drop 이벤트 리스너 추가
         const mainSidebarCard = document.getElementById('main-sidebar-card');
@@ -840,6 +848,68 @@
                 processJsonFiles(jsonFiles);
             }
         }
+
+        // 선택삭제, 전체삭제 버튼 이벤트 보강
+        selectAllBtn.addEventListener('click', () => {
+            const activeTab = document.querySelector('.nav-link.active').id;
+            if (activeTab === 'layers-tab') {
+                const checkboxes = document.querySelectorAll('#layer-list-content .form-check-input[type="checkbox"]');
+                const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                checkboxes.forEach(cb => cb.checked = !allChecked);
+            } else if (activeTab === 'xlsx-tab') {
+                const checkboxes = document.querySelectorAll('#xlsx-list-content .xlsx-check');
+                const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                checkboxes.forEach(cb => cb.checked = !allChecked);
+            } else if (activeTab === 'json-tab') {
+                const checkboxes = document.querySelectorAll('#json-list-content .json-check');
+                const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                checkboxes.forEach(cb => cb.checked = !allChecked);
+            }
+        });
+        deleteCurrentTabBtn.addEventListener('click', () => {
+            const activeTab = document.querySelector('.nav-link.active').id;
+            if (activeTab === 'layers-tab') {
+                deleteSelectedLayers();
+            } else if (activeTab === 'xlsx-tab') {
+                deleteSelectedXlsx();
+            } else if (activeTab === 'json-tab') {
+                deleteSelectedJsons();
+            }
+        });
+        // 전체삭제 버튼도 탭별로 동작하도록 보강
+        const clearAllBtn = document.getElementById('clear-all-btn');
+        clearAllBtn.addEventListener('click', () => {
+            const activeTab = document.querySelector('.nav-link.active').id;
+            if (activeTab === 'layers-tab') {
+                if (!loadedLayers || Object.keys(loadedLayers).length === 0) {
+                    alert('삭제할 레이어가 없습니다.');
+                    return;
+                }
+                if (confirm('정말로 모든 레이어를 삭제하시겠습니까?')) {
+                    Object.values(loadedLayers).forEach(item => map.removeLayer(item.layer));
+                    loadedLayers = {};
+                    updateLayerList();
+                }
+            } else if (activeTab === 'xlsx-tab') {
+                if (!loadedXlsx || Object.keys(loadedXlsx).length === 0) {
+                    alert('삭제할 XLSX 파일이 없습니다.');
+                    return;
+                }
+                if (confirm('정말로 모든 XLSX 파일을 삭제하시겠습니까?')) {
+                    loadedXlsx = {};
+                    updateXlsxList();
+                }
+            } else if (activeTab === 'json-tab') {
+                if (!loadedJsons || Object.keys(loadedJsons).length === 0) {
+                    alert('삭제할 JSON 파일이 없습니다.');
+                    return;
+                }
+                if (confirm('정말로 모든 JSON 파일을 삭제하시겠습니까?')) {
+                    loadedJsons = {};
+                    updateJsonList();
+                }
+            }
+        });
 
     </script>
 </body>
