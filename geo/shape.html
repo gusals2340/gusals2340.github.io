@@ -596,37 +596,95 @@
             });
         }
 
+        // XLSX 매칭 함수
+        function isXlsxMatched(item, name) {
+            for (const xlsxKey in loadedXlsx) {
+                const csvData = parseCsvData(loadedXlsx[xlsxKey].content);
+                for (const rowKey in csvData) {
+                    // SOURCE(파일명) 또는 ID(숫자)로 매칭
+                    if (
+                        rowKey === name ||
+                        (csvData[rowKey].SOURCE && csvData[rowKey].SOURCE === name) ||
+                        (item.id && csvData[rowKey].ID && String(csvData[rowKey].ID) === String(item.id))
+                    ) {
+                        // 디버깅용 로그
+                        // console.log('XLSX 매칭:', name, '==', rowKey, 'or', csvData[rowKey].SOURCE, 'id:', item.id, 'vs', csvData[rowKey].ID);
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        // JSON 매칭 함수
+        function isJsonMatched(item) {
+            // styleMap 매칭 (레이어 id)
+            if (item.id && styleMap[item.id]) return true;
+            // geojson feature의 STYLE/id 기준으로도 매칭
+            if (item.layer && item.layer.toGeoJSON) {
+                const geojson = item.layer.toGeoJSON();
+                const features = Array.isArray(geojson.features) ? geojson.features : [];
+                for (const feature of features) {
+                    const styleId = feature.properties && (feature.properties.STYLE || feature.properties.id);
+                    if (!styleId) continue;
+                    if (styleMap[styleId]) return true;
+                    for (const jsonName in loadedJsons) {
+                        try {
+                            const jsonData = JSON.parse(loadedJsons[jsonName].content);
+                            if (Array.isArray(jsonData)) {
+                                if (jsonData.find(s => String(s.id) === String(styleId))) return true;
+                            } else if (jsonData[styleId] || jsonData[String(styleId)]) {
+                                return true;
+                            }
+                        } catch (e) {}
+                    }
+                }
+            }
+            return false;
+        }
+
         function updateLayerList() {
             const container = document.getElementById('layer-list-content');
             container.innerHTML = '';
             const layerNames = Object.keys(loadedLayers);
-
             if (layerNames.length === 0) {
                 container.innerHTML = `<div class="text-center text-muted p-5"><i class="fa-solid fa-layer-group fa-2x mb-3"></i><p>폴더나 파일을 선택하여<br>레이어를 추가하세요.</p></div>`;
                 return;
             }
-
             layerNames.forEach(name => {
                 const item = loadedLayers[name];
                 const itemDiv = document.createElement('div');
-                itemDiv.className = 'layer-item';
-                
-                // Checkbox for selection
+                itemDiv.className = 'layer-item d-flex align-items-center';
+                // 체크박스
                 const selectCheckbox = document.createElement('input');
                 selectCheckbox.className = 'form-check-input layer-check';
                 selectCheckbox.type = 'checkbox';
                 selectCheckbox.dataset.layerName = name;
                 itemDiv.appendChild(selectCheckbox);
-
-                // Layer name span
+                // 이름
                 const layerNameSpan = document.createElement('span');
                 layerNameSpan.className = 'layer-name';
                 layerNameSpan.textContent = name;
                 itemDiv.appendChild(layerNameSpan);
-
-                // Switch for visibility
+                // 매칭 여부 뱃지 (XLSX/JSON)
+                const badgeGroup = document.createElement('span');
+                badgeGroup.style.display = 'flex';
+                badgeGroup.style.gap = '0.25rem';
+                badgeGroup.style.marginLeft = '0.75rem';
+                // XLSX 매칭
+                const xlsxBadge = document.createElement('span');
+                xlsxBadge.className = 'badge ' + (isXlsxMatched(item, name) ? 'bg-primary' : 'bg-danger');
+                xlsxBadge.textContent = 'XLSX';
+                badgeGroup.appendChild(xlsxBadge);
+                // JSON 매칭
+                const jsonBadge = document.createElement('span');
+                jsonBadge.className = 'badge ' + (isJsonMatched(item) ? 'bg-primary' : 'bg-danger');
+                jsonBadge.textContent = 'JSON';
+                badgeGroup.appendChild(jsonBadge);
+                itemDiv.appendChild(badgeGroup);
+                // Switch for visibility (오른쪽 끝에 충분한 여백)
                 const switchDiv = document.createElement('div');
-                switchDiv.className = 'form-check form-switch';
+                switchDiv.className = 'form-check form-switch ms-auto';
+                switchDiv.style.marginLeft = '1.5rem';
                 const toggleInput = document.createElement('input');
                 toggleInput.className = 'form-check-input';
                 toggleInput.type = 'checkbox';
@@ -636,11 +694,7 @@
                 }
                 switchDiv.appendChild(toggleInput);
                 itemDiv.appendChild(switchDiv);
-                
-                // Append the main itemDiv to the container
                 container.appendChild(itemDiv);
-
-                // Add event listener to the toggle switch
                 toggleInput.addEventListener('change', (e) => {
                     item.visible = e.target.checked;
                     redrawLayersByPriority();
