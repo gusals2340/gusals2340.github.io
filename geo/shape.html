@@ -230,8 +230,6 @@
             }
             e.target.value = null;
         });
-        document.getElementById('clear-all-btn').addEventListener('click', clearAllLayers);
-        document.getElementById('delete-selected-btn').addEventListener('click', deleteSelectedLayers);
         document.getElementById('cancel-processing-btn').addEventListener('click', cancelProcessing);
 
         let osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' });
@@ -281,6 +279,52 @@
                 handleAllFiles(files);
             }
         });
+
+        const selectAllBtn = document.getElementById('select-all-btn');
+        // 기존 연결 제거 및 탭별 분기 핸들러로 통일
+        // document.getElementById('delete-current-tab-btn').addEventListener('click', () => { // 제거
+        //     const activeTab = document.querySelector('.nav-link.active').id;
+        //     if (activeTab === 'layers-tab') {
+        //         deleteSelectedLayers();
+        //     } else if (activeTab === 'xlsx-tab') {
+        //         deleteSelectedXlsx();
+        //     } else if (activeTab === 'json-tab') {
+        //         deleteSelectedJsons();
+        //     }
+        // });
+        // 전체삭제 버튼도 탭별로 동작하도록 보강
+        // document.getElementById('clear-all-btn').addEventListener('click', () => { // 기존 코드
+        //     const activeTab = document.querySelector('.nav-link.active').id;
+        //     if (activeTab === 'layers-tab') {
+        //         if (!loadedLayers || Object.keys(loadedLayers).length === 0) {
+        //             alert('삭제할 레이어가 없습니다.');
+        //             return;
+        //         }
+        //         if (confirm('정말로 모든 레이어를 삭제하시겠습니까?')) {
+        //             Object.values(loadedLayers).forEach(item => map.removeLayer(item.layer));
+        //             loadedLayers = {};
+        //             updateLayerList();
+        //         }
+        //     } else if (activeTab === 'xlsx-tab') {
+        //         if (!loadedXlsx || Object.keys(loadedXlsx).length === 0) {
+        //             alert('삭제할 XLSX 파일이 없습니다.');
+        //             return;
+        //         }
+        //         if (confirm('정말로 모든 XLSX 파일을 삭제하시겠습니까?')) {
+        //             loadedXlsx = {};
+        //             updateXlsxList();
+        //         }
+        //     } else if (activeTab === 'json-tab') {
+        //         if (!loadedJsons || Object.keys(loadedJsons).length === 0) {
+        //             alert('삭제할 JSON 파일이 없습니다.');
+        //             return;
+        //         }
+        //         if (confirm('정말로 모든 JSON 파일을 삭제하시겠습니까?')) {
+        //             loadedJsons = {};
+        //             updateJsonList();
+        //         }
+        //     }
+        // });
 
         async function processFiles(files) {
             if (files.length === 0) return;
@@ -515,14 +559,19 @@
 
             jsonNames.forEach(name => {
                 const itemDiv = document.createElement('div');
-                itemDiv.className = 'layer-item'; // 기존 레이어 아이템 스타일 재활용
-                
+                itemDiv.className = 'layer-item';
+                // 체크박스 추가
+                const selectCheckbox = document.createElement('input');
+                selectCheckbox.className = 'form-check-input json-check';
+                selectCheckbox.type = 'checkbox';
+                selectCheckbox.dataset.jsonName = name;
+                itemDiv.appendChild(selectCheckbox);
+                // 이름
                 const jsonNameSpan = document.createElement('span');
                 jsonNameSpan.className = 'layer-name';
                 jsonNameSpan.textContent = name;
                 itemDiv.appendChild(jsonNameSpan);
-
-                // 삭제 버튼 추가
+                // 삭제 버튼
                 const deleteBtn = document.createElement('button');
                 deleteBtn.className = 'btn btn-sm btn-danger';
                 deleteBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
@@ -534,7 +583,6 @@
                     }
                 });
                 itemDiv.appendChild(deleteBtn);
-
                 container.appendChild(itemDiv);
             });
         }
@@ -565,7 +613,7 @@
                 
                 // Checkbox for selection
                 const selectCheckbox = document.createElement('input');
-                selectCheckbox.className = 'form-check-input';
+                selectCheckbox.className = 'form-check-input layer-check';
                 selectCheckbox.type = 'checkbox';
                 selectCheckbox.dataset.layerName = name;
                 itemDiv.appendChild(selectCheckbox);
@@ -601,8 +649,9 @@
         }
 
         function deleteSelectedLayers() {
-            const checkboxes = document.querySelectorAll('#layer-list-content .form-check-input[type="checkbox"]:checked');
-            if (checkboxes.length === 0) { alert("삭제할 레이어를 선택하세요."); return; }
+            const checkboxes = document.querySelectorAll('#layer-list-content .layer-check:checked');
+            console.log('레이어 선택삭제 체크박스:', checkboxes.length);
+            if (checkboxes.length === 0) { alert('삭제할 레이어를 선택하세요.'); return; }
             checkboxes.forEach(cb => {
                 const layerName = cb.getAttribute('data-layer-name');
                 if (loadedLayers[layerName]) {
@@ -613,9 +662,31 @@
             updateLayerList();
         }
 
+        function deleteSelectedJsons() {
+            const checkboxes = document.querySelectorAll('#json-list-content .json-check:checked');
+            console.log('JSON 선택삭제 체크박스:', checkboxes.length);
+            if (checkboxes.length === 0) { alert('삭제할 JSON을 선택하세요.'); return; }
+            checkboxes.forEach(cb => {
+                const name = cb.getAttribute('data-json-name');
+                if (loadedJsons[name]) delete loadedJsons[name];
+            });
+            updateJsonList();
+        }
+
+        function deleteSelectedXlsx() {
+            const checkboxes = document.querySelectorAll('#xlsx-list-content .xlsx-check:checked');
+            console.log('XLSX 선택삭제 체크박스:', checkboxes.length);
+            if (checkboxes.length === 0) { alert('삭제할 XLSX를 선택하세요.'); return; }
+            checkboxes.forEach(cb => {
+                const name = cb.getAttribute('data-xlsx-name');
+                if (loadedXlsx[name]) delete loadedXlsx[name];
+            });
+            updateXlsxList();
+        }
+
         function clearAllLayers() {
-            if (Object.keys(loadedLayers).length === 0 && Object.keys(loadedCsvs).length === 0 && Object.keys(loadedJsons).length === 0 && Object.keys(loadedXlsx).length === 0) { alert("삭제할 항목이 없습니다."); return; }
-            if (confirm("정말로 모든 레이어, CSV, JSON, XLSX 파일을 삭제하시겠습니까?")) {
+            if (Object.keys(loadedLayers).length === 0 && Object.keys(loadedJsons).length === 0 && Object.keys(loadedXlsx).length === 0) { alert("삭제할 항목이 없습니다."); return; }
+            if (confirm("정말로 모든 레이어, JSON, XLSX 파일을 삭제하시겠습니까?")) {
                 // 지도에서 모든 레이어 제거
                 Object.values(loadedLayers).forEach(item => map.removeLayer(item.layer));
                 loadedLayers = {};
@@ -627,7 +698,6 @@
 
                 // UI 업데이트
                 updateLayerList();
-                updateCsvList();
                 updateJsonList();
                 updateXlsxList();
             }
@@ -818,16 +888,6 @@
             });
         }
 
-        function deleteSelectedXlsx() {
-            const checkboxes = document.querySelectorAll('#xlsx-list-content .xlsx-check:checked');
-            if (checkboxes.length === 0) { alert('삭제할 XLSX를 선택하세요.'); return; }
-            checkboxes.forEach(cb => {
-                const name = cb.getAttribute('data-xlsx-name');
-                if (loadedXlsx[name]) delete loadedXlsx[name];
-            });
-            updateXlsxList();
-        }
-
         function handleAllFiles(files) {
             if (!files || files.length === 0) return;
             const shpFiles = Array.from(files).filter(file => file.name.toLowerCase().endsWith('.shp'));
@@ -850,66 +910,54 @@
         }
 
         // 선택삭제, 전체삭제 버튼 이벤트 보강
-        selectAllBtn.addEventListener('click', () => {
-            const activeTab = document.querySelector('.nav-link.active').id;
-            if (activeTab === 'layers-tab') {
-                const checkboxes = document.querySelectorAll('#layer-list-content .form-check-input[type="checkbox"]');
-                const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-                checkboxes.forEach(cb => cb.checked = !allChecked);
-            } else if (activeTab === 'xlsx-tab') {
-                const checkboxes = document.querySelectorAll('#xlsx-list-content .xlsx-check');
-                const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-                checkboxes.forEach(cb => cb.checked = !allChecked);
-            } else if (activeTab === 'json-tab') {
-                const checkboxes = document.querySelectorAll('#json-list-content .json-check');
-                const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-                checkboxes.forEach(cb => cb.checked = !allChecked);
-            }
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('delete-selected-btn').addEventListener('click', () => {
+                const activeTab = document.querySelector('.nav-link.active').id;
+                console.log('선택삭제 클릭, 활성탭:', activeTab);
+                if (activeTab === 'layers-tab') {
+                    deleteSelectedLayers();
+                } else if (activeTab === 'xlsx-tab') {
+                    deleteSelectedXlsx();
+                } else if (activeTab === 'json-tab') {
+                    deleteSelectedJsons();
+                }
+            });
+
+            document.getElementById('clear-all-btn').addEventListener('click', () => {
+                const activeTab = document.querySelector('.nav-link.active').id;
+                console.log('전체삭제 클릭, 활성탭:', activeTab);
+                if (activeTab === 'layers-tab') {
+                    if (!loadedLayers || Object.keys(loadedLayers).length === 0) {
+                        alert('삭제할 레이어가 없습니다.');
+                        return;
+                    }
+                    if (confirm('정말로 모든 레이어를 삭제하시겠습니까?')) {
+                        Object.values(loadedLayers).forEach(item => map.removeLayer(item.layer));
+                        loadedLayers = {};
+                        updateLayerList();
+                    }
+                } else if (activeTab === 'xlsx-tab') {
+                    if (!loadedXlsx || Object.keys(loadedXlsx).length === 0) {
+                        alert('삭제할 XLSX 파일이 없습니다.');
+                        return;
+                    }
+                    if (confirm('정말로 모든 XLSX 파일을 삭제하시겠습니까?')) {
+                        loadedXlsx = {};
+                        updateXlsxList();
+                    }
+                } else if (activeTab === 'json-tab') {
+                    if (!loadedJsons || Object.keys(loadedJsons).length === 0) {
+                        alert('삭제할 JSON 파일이 없습니다.');
+                        return;
+                    }
+                    if (confirm('정말로 모든 JSON 파일을 삭제하시겠습니까?')) {
+                        loadedJsons = {};
+                        updateJsonList();
+                    }
+                }
+            });
         });
-        deleteCurrentTabBtn.addEventListener('click', () => {
-            const activeTab = document.querySelector('.nav-link.active').id;
-            if (activeTab === 'layers-tab') {
-                deleteSelectedLayers();
-            } else if (activeTab === 'xlsx-tab') {
-                deleteSelectedXlsx();
-            } else if (activeTab === 'json-tab') {
-                deleteSelectedJsons();
-            }
-        });
-        // 전체삭제 버튼도 탭별로 동작하도록 보강
-        const clearAllBtn = document.getElementById('clear-all-btn');
-        clearAllBtn.addEventListener('click', () => {
-            const activeTab = document.querySelector('.nav-link.active').id;
-            if (activeTab === 'layers-tab') {
-                if (!loadedLayers || Object.keys(loadedLayers).length === 0) {
-                    alert('삭제할 레이어가 없습니다.');
-                    return;
-                }
-                if (confirm('정말로 모든 레이어를 삭제하시겠습니까?')) {
-                    Object.values(loadedLayers).forEach(item => map.removeLayer(item.layer));
-                    loadedLayers = {};
-                    updateLayerList();
-                }
-            } else if (activeTab === 'xlsx-tab') {
-                if (!loadedXlsx || Object.keys(loadedXlsx).length === 0) {
-                    alert('삭제할 XLSX 파일이 없습니다.');
-                    return;
-                }
-                if (confirm('정말로 모든 XLSX 파일을 삭제하시겠습니까?')) {
-                    loadedXlsx = {};
-                    updateXlsxList();
-                }
-            } else if (activeTab === 'json-tab') {
-                if (!loadedJsons || Object.keys(loadedJsons).length === 0) {
-                    alert('삭제할 JSON 파일이 없습니다.');
-                    return;
-                }
-                if (confirm('정말로 모든 JSON 파일을 삭제하시겠습니까?')) {
-                    loadedJsons = {};
-                    updateJsonList();
-                }
-            }
-        });
+        // deleteCurrentTabBtn, selectAllBtn 등은 기존대로 유지, 단 deleteCurrentTabBtn 관련 선택삭제 분기 핸들러는 제거
 
     </script>
 </body>
