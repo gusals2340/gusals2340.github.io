@@ -643,7 +643,7 @@
                 // Add event listener to the toggle switch
                 toggleInput.addEventListener('change', (e) => {
                     item.visible = e.target.checked;
-                    if (item.visible) map.addLayer(item.layer); else map.removeLayer(item.layer);
+                    redrawLayersByPriority();
                 });
             });
         }
@@ -958,6 +958,17 @@
             });
         });
         // deleteCurrentTabBtn, selectAllBtn 등은 기존대로 유지, 단 deleteCurrentTabBtn 관련 선택삭제 분기 핸들러는 제거
+
+        // 레이어 우선순위(ID)대로 visible=true인 레이어만 다시 addLayer
+        function redrawLayersByPriority() {
+            // 모든 레이어를 지도에서 제거
+            Object.values(loadedLayers).forEach(item => map.removeLayer(item.layer));
+            // visible=true인 레이어만 id 오름차순으로 다시 추가
+            Object.values(loadedLayers)
+                .filter(item => item.visible)
+                .sort((a, b) => (a.id ?? Infinity) - (b.id ?? Infinity))
+                .forEach(item => map.addLayer(item.layer));
+        }
 
     </script>
 </body>
