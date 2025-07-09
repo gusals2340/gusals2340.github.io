@@ -1,0 +1,34 @@
+{
+  "mcpServers": {
+    "YouTube Transcript Server": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@smithery/cli@latest",
+        "run",
+        "@sinco-lab/mcp-youtube-transcript",
+        "--key",
+        "b4c977dd-006b-4030-9205-0e55a375366a",
+        "--profile",
+        "deliberate-locust-W04Oyj"
+      ],
+      "env": {}
+    },
+    "Tavily MCP Server": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@smithery/cli@latest",
+        "run",
+        "@tavily-ai/tavily-mcp",
+        "--key",
+        "b4c977dd-006b-4030-9205-0e55a375366a",
+        "--profile",
+        "deliberate-locust-W04Oyj"
+      ],
+      "env": {}
+    }
+  }
+}
